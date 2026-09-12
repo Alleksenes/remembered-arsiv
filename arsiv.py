@@ -1,225 +1,226 @@
 # -*- coding: utf-8 -*-
-"""Remembered iş arşivi paketleyici (Alleksenes / İ. Mert paketleri).
-Obsidian'dan DIL-001 ve PR-001 teslim dosyalarını kopyalar, site metadata'sıyla
-(kanonik · canlı site) tasarlanmış embed HTML readme üretir, her paketi zip'ler.
-Off-record / süreç içi / deprecated / ham oturum dosyaları pakete GİRMEZ."""
-import os
+"""Remembered iş arşivi paketleyici (v3 · NOCTURNE).
+Obsidian → her .md için koyu temalı, iç-bağlantılı HTML + readme(index) + zip.
+Editöryel: süreç/deprecated notları manifestta YOK; wikilinkler paket-içi tıklanır.
+Tek tık: her pakette index.html + birleşik Remembered-Arsiv.zip (kök INDEX).
+"""
 import shutil
-import sys
 from pathlib import Path
 
-from PIL import Image  # kullanılmıyor; font css'i doğrudan gömülecek
+import mdrender
 
 VAULT = Path.home() / ".llm-wiki/wiki/projects/remembered"
 OUT = Path(__file__).resolve().parent
-GEN3 = Path.home() / "Documents/GitHub/remembered-pitchdecks-gen3"
-FONTS = GEN3 / "fonts.css"
-
-#: site-kanonik tasarım tokenları (remembered-design-tokens.md)
-SITE = {
-    "paper": "#FAF8F5", "paper2": "#F8F8F5", "paper3": "#F7F3EA",
-    "ink": "#111111", "ink2": "#1E1B18", "ink3": "#2B2724",
-    "sec": "#787163", "bord": "#DCD3C1",
-    "bronze": "#855327", "bronze2": "#8C6239", "amber": "#C29B38",
-    "gold": "#C5A059", "mono": "'JetBrains Mono',monospace",
-    "serif": "'Playfair Display','Bodoni Moda',Georgia,serif",
-    "body": "'Newsreader',Georgia,serif",
-    "sans": "'Inter',system-ui,sans-serif",
-}
+SITE = dict(mdrender.T)  # NOCTURNE koyu
 
 TASKS = {
     "DIL-001": {
         "name": "Dil Stratejisi (EN+TR mimarisi)",
         "tagline": "Remembered dil disiplini: ses kuralları, retorik, semantik alan, karar envanteri ve Uğur karar paketleri.",
-        "notion": "https://www.notion.so/Buraya-DIL-001-is-notu-linki",
-        "notion_label": "DIL-001 · Dil Stratejisi (Notion iş notu)",
+        "notion": "https://app.notion.com/p/DIL-001-Dil-3ca8e2f96dde810eba32c6b6e077a40d",
         "files": [
             ("dil-stratejisi.md", "Dil Stratejisi (EN+TR mimarisi)", "Görev yüzeyi; dört teslimat omurgası.", "dil001-docs"),
             ("dil-stratejisi-notu.md", "Dil Stratejisi Notu", "EN+TR çıkış, DE/ES/FR genişleme kriterleri, global hesap.", "dil001-docs"),
-            ("dil-stratejisi-filolog-kalemi.md", "Filologun Kalemi", "Ses disiplini: stratejiyi değil sesi düzeltir; altı kural, AI reglajı.", "dil001-docs"),
+            ("dil-stratejisi-filolog-kalemi.md", "Filologun Kalemi", "Ses disiplini; altı kural, AI reglajı.", "dil001-docs"),
             ("tr-retorik-kavram-notu.md", "TR Retorik & Kavram Kurulumu", "Türkçede farklı kılacak kavram seti ve tasnif disiplini.", "dil001-docs"),
-            ("semantik-alan-veritabani.md", "Semantik Alan Veritabanı", "40 kayıt; formül aileleri ve sahiplik kuralı.", "dil001-docs"),
-            ("rakip-dil-denetimi-20260908.md", "Rakip Dil Denetimi", "Beş açık karar için rakip dili kanıt taraması.", "dil001-docs"),
-            ("canli-site-dil-denetimi-20260908.md", "Canlı Site Dil Denetimi", "TR lokalizasyon, 71 string, canlı sözlük.", "dil001-docs"),
+            ("semantik-alan-veritabani.md", "Semantik Alan Veritabanı", "Formül aileleri ve sahiplik kuralı.", "dil001-docs"),
+            ("rakip-dil-denetimi-20260908.md", "Rakip Dil Denetimi", "Açık kararlar için rakip dili kanıt taraması.", "dil001-docs"),
+            ("canli-site-dil-denetimi-20260908.md", "Canlı Site Dil Denetimi", "TR lokalizasyon, canlı sözlük.", "dil001-docs"),
             ("dil-karar-envanteri-ve-yonerge-taslagi-20260908.md", "Karar Envanteri & Yönerge Taslağı", "Açık kararlar ve üretim yönergesi.", "dil001-docs"),
             ("arsiv-adaleti-on-iki-ilke-taslak-20260908.md", "Arşiv Adaleti · 12 İlke (taslak)", "Arşiv adaleti ilke taslağı.", "dil001-docs"),
-            ("is-10-semantik-veritabani-briefi.md", "Semantik Veritabanı Briefi", "Çalışma briefi.", "dil001-docs"),
-            ("gorev-briefi-dil001-govde-sentezi.md", "Gövde Sentezi Briefi", "Arşivlenen notlardan owner kararlı dil hattı özeti.", "dil001-docs"),
-            ("dil-001-uyumlanma-sentezi-20260907.md", "Uyumlanma Sentezi", "Hat hizalaması ve kapsam.", "dil001-docs"),
-            ("ugur-gorusme-paketi-20260908.md", "Uğur Görüşme Paketi (2026-09-08)", "Açık kararların toplantı paketi.", "dil001-docs"),
-            ("ugur-karar-paketi-tek-sayfa-20260910.md", "Uğur Karar Paketi (Tek Sayfa, 2026-09-10)", "Tokalaşılan karar paketi.", "dil001-docs"),
-            ("is-govde-sentezi-raporu.md", "Gövde Sentezi Raporu (İŞ A/B/C)", "40 kayıtlık SEM tablosu dahil sentez raporu.", "dil001-raporlar"),
+            ("ugur-gorusme-paketi-20260908.md", "Uğur Görüşme Paketi", "Açık kararların toplantı paketi.", "dil001-docs"),
+            ("ugur-karar-paketi-tek-sayfa-20260910.md", "Uğur Karar Paketi (Tek Sayfa)", "Tokalaşılan karar paketi.", "dil001-docs"),
+            ("is-govde-sentezi-raporu.md", "Gövde Sentezi Raporu (İŞ A/B/C)", "SEM tablosu dahil sentez raporu.", "dil001-raporlar"),
         ],
     },
     "PR-001": {
         "name": "Global PR & Basın Rezervasyonu",
         "tagline": "Basın kiti (TR/EN), üretim notları, iş planı ve sosyal içerik motoru.",
-        "notion": "https://www.notion.so/Buraya-PR-001-is-notu-linki",
-        "notion_label": "PR-001 · Global PR & Basın (Notion iş notu)",
+        "notion": "https://app.notion.com/p/PR-001-Global-PR-3ca8e2f96dde814ba4f2e1e9c345ebb2",
         "files": [
             ("TR-basin-kiti.md", "Basın Kiti (TR)", "Master TR dosya.", "basin-kiti"),
             ("EN-press-kit.md", "Press Kit (EN)", "Master EN dosya.", "basin-kiti"),
-            ("global-pr-basin.md", "Görev Notu: Global PR & Basın", "Sorumlu, ardıl, alt adımlar, kaynaklar.", "task"),
+            ("global-pr-basin.md", "Görev Notu: Global PR & Basın", "Sorumlu, ardıl, alt adımlar.", "task"),
             ("pr-001-basin-kiti-is-plani.md", "Basın Kiti İş Planı", "Deadline, sorumlu, kapanış ölçütleri.", "task"),
             ("01-basin-kiti-uretim-notu.md", "Uğur · Basın Kiti Üretim Notu (verbatim)", "8 bölümlük üretim şartnamesi.", "ugur-briefleri"),
             ("02-ilk-tanitim-metinleri-ve-ekip-dagilimi.md", "Uğur · İlk Tanıtım Metinleri + Ekip Dağılımı", "Ana mesaj, TR/EN giriş, gönderiler.", "ugur-briefleri"),
-            ("03-icerik-paketi-devami.md", "Uğur · İçerik Paketi Devamı", "06-09 gönderiler, video, story seti, yayın sırası.", "ugur-briefleri"),
-            ("04-ozan-otomasyon-briefi-ve-buffer-arastirmasi.md", "Uğur · Ozan Otomasyon Briefi + Buffer Araştırması", "Günlük profil otomasyonu ve takvim araç karşılaştırması.", "ugur-briefleri"),
+            ("03-icerik-paketi-devami.md", "Uğur · İçerik Paketi Devamı", "Gönderiler, video, story, yayın sırası.", "ugur-briefleri"),
+            ("04-ozan-otomasyon-briefi-ve-buffer-arastirmasi.md", "Uğur · Ozan Otomasyon + Buffer Araştırması", "Günlük profil otomasyonu ve takvim araç karşılaştırması.", "ugur-briefleri"),
             ("05-kalite-denetimi.md", "Kalite Denetimi", "PR hattı dil kuralları doğrulaması.", "ugur-briefleri"),
             ("sosyal-medya-icerik-motoru.md", "Sosyal Medya & İçerik Motoru", "Lansman kampanyaları, haftalık takvim.", "icerik"),
         ],
     },
 }
 
-#: kaynak: dil001 raporların retros (is-1-5.. is-10) + tüm deprecated + oturum/JSONL DIŞARI
-
-
-def font_css():
-    return FONTS.read_text(encoding="utf-8") if FONTS.exists() else ""
-
-
-def rel_src(taskid, fname, group):
-    if taskid == "DIL-001":
-        return VAULT / "02-ekip-gorev/gorevler/DIL-001" / group / fname
-    # PR-001
-    return {
-        "basin-kiti": VAULT / "04-icerik/basin-kiti-20260911",
-        "task": VAULT / "02-ekip-gorev" if fname.startswith("pr-001") else VAULT / "02-ekip-gorev/gorevler",
-        "ugur-briefleri": VAULT / "04-icerik/ugur-briefleri-20260907",
-        "icerik": VAULT / "04-icerik",
-    }[group] / fname
-
 
 def esc(t):
     return (str(t).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
 
 
+def rel_src(taskid, fname, group):
+    if taskid == "DIL-001":
+        return VAULT / "02-ekip-gorev/gorevler/DIL-001" / group / fname
+    if group == "task":
+        base = VAULT / ("02-ekip-gorev" if fname.startswith("pr-001")
+                        else "02-ekip-gorev/gorevler")
+        return base / fname
+    base = {"basin-kiti": VAULT / "04-icerik/basin-kiti-20260911",
+            "ugur-briefleri": VAULT / "04-icerik/ugur-briefleri-20260907",
+            "icerik": VAULT / "04-icerik"}[group]
+    return base / fname
+
+
+_CSS = """
+:root{--paper:@paper@;--paper2:@paper2@;--ink:@ink@;--ink2:@ink2@;--sec:@sec@;--bord:@bord@;
+ --bronze:@bronze@;--bronze2:@bronze2@;--amber:@amber@;--gold:@gold@;--mono:@mono@;
+ --serif:@serif@;--body:@body@;--sans:@sans@}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.58;-webkit-font-smoothing:antialiased}
+body:before{content:"";position:fixed;inset:0;background:radial-gradient(1100px 420px at 78% -120px, @amber@30, transparent 62%);pointer-events:none;z-index:0}
+.topband{height:5px;background:linear-gradient(90deg,var(--amber),var(--bronze) 45%,var(--bronze2) 90%)}
+.page{max-width:960px;margin:0 auto;padding:0 44px 80px;position:relative;z-index:1}
+header{padding:30px 0 18px;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--bord);margin-bottom:42px}
+.brand{font-family:var(--body);font-size:12.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink2)}
+.sec{font-family:var(--mono);font-size:11.5px;letter-spacing:.28em;color:var(--gold);text-transform:uppercase}
+.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.32em;color:var(--gold);text-transform:uppercase;margin-bottom:14px}
+h1{font-family:var(--serif);font-size:52px;font-weight:500;line-height:1.08;letter-spacing:-.014em;margin-bottom:16px;max-width:22ch}
+h1 em{font-style:italic;color:var(--bronze2)}
+.lede{font-size:20px;color:var(--ink2);max-width:60ch;margin-bottom:30px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bord);border:1px solid var(--bord);margin-bottom:34px}
+.stat{background:var(--paper2);padding:18px 18px 15px}
+.stat .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;color:var(--ink3);text-transform:uppercase;display:block;margin-bottom:7px}
+.stat .v{font-family:var(--serif);font-size:19px;color:var(--ink);line-height:1.3}
+.cta{display:flex;gap:14px;align-items:center;margin-bottom:48px;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper);background:var(--bronze);padding:13px 22px;text-decoration:none;display:inline-flex;align-items:center;gap:9px}
+.btn:hover{background:var(--bronze2)}
+.ghost{font-family:var(--mono);font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);text-decoration:none;border-bottom:1px solid var(--amber);padding-bottom:3px}
+section h2{font-family:var(--serif);font-size:27px;font-weight:500;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;margin-bottom:30px}
+tr{border-top:1px solid var(--bord)}
+tr:last-child{border-bottom:1px solid var(--bord)}
+td{padding:15px 8px;vertical-align:top}
+.num{font-family:var(--mono);font-size:12px;color:var(--gold);white-space:nowrap;width:38px}
+.tt{font-family:var(--serif);font-size:19px;color:var(--gold);text-decoration:none;font-weight:500}
+.tt:hover{text-decoration:underline;color:var(--bronze2)}
+.raw{font-family:var(--mono);font-size:10.5px;color:var(--ink3);text-decoration:none;border:1px solid var(--bord);padding:1px 6px;margin-left:8px;vertical-align:middle}
+.raw:hover{border-color:var(--bronze2);color:var(--bronze2)}
+.desc{display:block;font-size:14.5px;color:var(--ink3);margin-top:3px}
+.callout{border-left:3px solid var(--bronze2);background:var(--paper2);padding:16px 18px;margin:34px 0;font-size:15px;color:var(--ink2)}
+.callout b{color:var(--ink)}
+footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--bord);display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--sec);text-transform:uppercase}
+footer a{color:var(--gold);text-decoration:none}
+@media(max-width:680px){.page{padding:0 20px 60px}h1{font-size:38px}.stats{grid-template-columns:repeat(2,1fr)}}
+"""
+
+
 def render_css():
-    s = CSS
+    s = _CSS
     for k, v in SITE.items():
-        s = s.replace("%(" + k + ")s", v)
+        s = s.replace("@" + k + "@", v)
     return s
 
 
 def readme(tid, meta):
     rows = []
     for i, (fname, label, desc, group) in enumerate(meta["files"], start=1):
-        rows.append(
-            '<tr><td class="num">%02d</td>'
-            '<td class="f"><a href="%s" class="fname">%s</a>'
-            '<span class="fdesc">%s</span></td></tr>'
-            % (i, esc(fname), esc(label), esc(desc)))
+        html = fname[:-3] + ".html" if fname.endswith(".md") else fname
+        rows.append('<tr><td class="num">%02d</td><td><a class="tt" href="%s">%s</a>'
+                    '<a class="raw" href="%s">md</a>'
+                    '<span class="desc">%s</span></td></tr>'
+                    % (i, esc(html), esc(label), esc(fname), esc(desc)))
     files_html = "".join(rows)
-    return """<!doctype html>
-<html lang="tr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Remembered · {tid} — {name}</title>
-<style>{css}</style></head><body>
-<header><span class="brand">THE REMEMBERED CHRONICLE · ARŞİV</span><span class="sec">{tid}</span></header>
-<main>
-  <div class="kicker">ÖZET PAKET · {tid}</div>
-  <h1>{tid}&nbsp;·&nbsp;{name}</h1>
-  <p class="lede">{tagline}</p>
-  <dl class="meta">
-    <dt>Asli sorumlu</dt><dd>Alleksenes / İ. Mert · Büyüme &amp; Operasyon</dd>
-    <dt>Durum</dt><dd>Notion iş notuyla eş · paketlenmiş teslim</dd>
-    <dt>İçerik</dt><dd>{n} dosya · markdown</dd>
-  </dl>
-  <a class="notion" href="{notion}">{notion_label} ↗</a>
-  <section>
-    <h2>Paket Dosyaları</h2>
-    <table>{files_html}</table>
-  </section>
-  <p class="foot">Bu paket, siteden alınan kanonik tasarım metadatasıyla hazırlandı (krem + mürekkep + bronz; Newsreader / Playfair / Inter / JetBrains Mono). İçerik Obsidian arşivinden, off-record ve süreç içi dosyalar dışarıda bırakılarak toplandı.</p>
-</main>
-</body></html>""".format(
-        tid=tid, name=esc(meta["name"]), tagline=esc(meta["tagline"]),
-        notion=esc(meta["notion"]), notion_label=esc(meta["notion_label"]),
-        n=len(meta["files"]), files_html=files_html,
-        css=render_css())
+    return ("<!doctype html><html lang=tr><head><meta charset=utf-8>"
+            "<meta name=viewport content=\"width=device-width,initial-scale=1\">"
+            "<title>Remembered · %s</title><style>%s</style></head><body>"
+            "<div class=topband></div><div class=page>"
+            "<header><span class=brand>THE REMEMBERED CHRONICLE · ARŞİV</span>"
+            "<span class=sec>%s · ALLEKSENES / İ. MERT</span></header>"
+            "<div class=kicker>GÖREV PAKETİ · %s</div>"
+            "<h1>%s</h1><p class=lede>%s</p>"
+            "<div class=stats>"
+            "<div class=stat><span class=k>Asli sorumlu</span><span class=v>Alleksenes / İ. Mert</span></div>"
+            "<div class=stat><span class=k>Kapsam</span><span class=v>%d belge</span></div>"
+            "<div class=stat><span class=k>Görünüm</span><span class=v>Koyu · editoryal</span></div>"
+            "<div class=stat><span class=k>Durum</span><span class=v>Teslim edilebilir</span></div></div>"
+            "<div class=cta><a class=btn href=\"%s\">Notion iş notu ↗</a>"
+            "<a class=ghost href=\"../INDEX.html\">Arşiv dizini ↗</a></div>"
+            "<section><h2>Paket Dosyaları</h2><table>%s</table></section>"
+            "<div class=callout><b>Nasıl açılır:</b> zip'i <b>çıkar</b>, bu dosyaya çift tıkla. "
+            "Belge adları tıklanır ve aynı klasördeki komşu sayfalara gider; "
+            "satır sonundaki <b>md</b> kaynak markdown. Zip içinden (çıkarmadan) açarsan bağlantılar çalışmaz.</div>"
+            "<footer><span>%s</span><span>NOCTURNE · site bronz/altın ailesi</span></footer>"
+            "</div></body></html>"
+            % (esc(tid + " · " + meta["name"]), render_css(), esc(tid), esc(tid),
+               esc(meta["name"]), esc(meta["tagline"]), len(meta["files"]),
+               esc(meta["notion"]), files_html, esc(tid + " · " + meta["name"])))
 
 
-CSS = """
-:root{--paper:%(paper)s;--paper2:%(paper2)s;--ink:%(ink)s;--ink2:%(ink2)s;
- --sec:%(sec)s;--bord:%(bord)s;--bronze:%(bronze)s;--bronze2:%(bronze2)s;
- --amber:%(amber)s;--mono:%(mono)s;--serif:%(serif)s;--body:%(body)s;--sans:%(sans)s;
-  --grain:url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E")}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--paper);color:var(--ink);font-family:var(--body);line-height:1.55;-webkit-font-smoothing:antialiased}
-body:before{content:"";position:fixed;inset:0;background-image:var(--grain);opacity:.05;mix-blend-mode:multiply;pointer-events:none;z-index:0}
-header{padding:34px 64px 22px;border-bottom:1px solid var(--bord);display:flex;justify-content:space-between;align-items:baseline;position:relative;z-index:1}
-.brand{font-family:var(--body);font-size:13px;letter-spacing:.3em;text-transform:uppercase;color:var(--ink2)}
-.sec{font-family:var(--mono);font-size:12px;letter-spacing:.28em;color:var(--bronze);text-transform:uppercase}
-main{max-width:1080px;margin:0 auto;padding:56px 64px 40px;position:relative;z-index:1}
-.kicker{font-family:var(--mono);font-size:12px;letter-spacing:.3em;color:var(--bronze);text-transform:uppercase;margin-bottom:20px}
-h1{font-family:var(--serif);font-size:46px;font-weight:500;line-height:1.12;letter-spacing:-.01em;margin-bottom:18px}
-.lede{font-size:21px;color:var(--ink2);max-width:64ch;margin-bottom:30px}
-.meta{display:grid;grid-template-columns:160px 1fr;gap:6px 20px;margin-bottom:30px;border-top:1px solid var(--bord);border-bottom:1px solid var(--bord);padding:18px 0}
-.meta dt{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;color:var(--sec);text-transform:uppercase}
-.meta dd{font-size:16px;color:var(--ink2)}
-.notion{display:inline-block;font-family:var(--mono);font-size:13px;letter-spacing:.12em;color:var(--paper);background:var(--bronze);padding:12px 20px;text-decoration:none;margin-bottom:44px}
-.notion:hover{background:var(--bronze2)}
-section h2{font-family:var(--serif);font-size:28px;font-weight:500;margin-bottom:14px}
-table{width:100%;border-collapse:collapse}
-tr{border-top:1px solid var(--bord)}
-tr:last-child{border-bottom:1px solid var(--bord)}
-td{padding:14px 6px;vertical-align:top}
-.num{font-family:var(--mono);font-size:12px;color:var(--amber);white-space:nowrap}
-.fname{font-family:var(--serif);font-size:19px;color:var(--bronze2);text-decoration:none;font-weight:500}
-.fname:hover{text-decoration:underline}
-.fdesc{display:block;font-size:15px;color:var(--sec);margin-top:3px}
-.foot{margin-top:48px;font-size:13px;color:var(--sec);max-width:76ch;padding-top:18px;border-top:1px solid var(--bord)}
-@media(max-width:720px){main{padding:34px 22px}header{padding:24px 22px 16px}h1{font-size:34px}.meta{grid-template-columns:110px 1fr}}
-""" + "%s"
+def index():
+    cards = "".join(
+        '<div class="card"><div class=tag>%s</div><h2>%s</h2><p>%s</p>'
+        '<a class=open href="%s/index.html" target="_blank">AÇ ▶</a></div>'
+        % (esc(tid), esc(m["name"]), esc(m["tagline"]), esc(tid))
+        for tid, m in TASKS.items())
+    t = ("<!doctype html><html lang=tr><head><meta charset=utf-8>"
+            "<meta name=viewport content=\"width=device-width,initial-scale=1\">"
+            "<title>Remembered · İş Arşivi</title><style>"
+            "body{margin:0;background:@paper@;color:@ink@;font-family:@serif@}"
+            ".band{height:5px;background:linear-gradient(90deg,@amber@,@bronze@ 45%,@bronze2@ 90%)}"
+            "header{padding:52px 64px 24px;border-bottom:1px solid @bord@}"
+            ".k{font-family:@mono@;font-size:11px;letter-spacing:.3em;color:@gold@;text-transform:uppercase;display:block;margin-bottom:10px}"
+            "h1{font-size:44px;font-weight:500;margin:0}"
+            "main{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:26px;padding:44px 64px}"
+            ".card{border:1px solid @bord@;background:@paper2@;padding:26px 24px;display:flex;flex-direction:column;gap:12px}"
+            ".tag{font-family:@mono@;font-size:11px;letter-spacing:.24em;color:@gold@}"
+            "h2{font-family:@serif@;font-size:24px;font-weight:500;margin:0}"
+            "p{font-family:@body@;color:@ink2@;font-size:15px;line-height:1.5}"
+            ".open{font-family:@mono@;font-size:12.5px;letter-spacing:.16em;color:@ink@;text-decoration:none;border-bottom:1px solid @bronze@;align-self:flex-start;padding-bottom:3px}"
+            ".note{padding:0 64px 60px;max-width:780px;font-family:@body@;color:@sec@;font-size:14.5px;line-height:1.6}"
+            ".note b{color:@ink2@}"
+            "@media(max-width:700px){main{padding:24px}header{padding:28px 24px}.note{padding:0 24px 44px}}"
+            "</style></head><body><div class=band></div><header><div class=k>REMEMBERED · ARŞİV · ALLEKSENES / İ. MERT</div>"
+            "<h1>İş Arşivi</h1></header><main>" + cards +
+            "</main><div class=note><b>Tek tık:</b> zip'i çıkar, <b>INDEX.html</b>'e çift tıkla; kartlardan "
+            "pakete, paketten belgeye. Wikilink'ler birbirine bağlı, deprecated/dahili işlem notları pakete konmadı. "
+            "Zip içinden açılırsa bağlantılar çalışmaz; önce çıkar.</div></body></html>")
+    for k, v in SITE.items():
+        t = t.replace("@" + k + "@", v)
+    return t
 
 
 def build():
-    assert FONTS.exists(), "fonts.css yok: önce gen3 fonts.py çalıştır"
-    fc = font_css()
+    # paketler
     for tid, meta in TASKS.items():
         pkg = OUT / tid
         if pkg.exists():
             shutil.rmtree(pkg)
         pkg.mkdir(parents=True, exist_ok=True)
-        for fname, _label, _desc, group in meta["files"]:
+        iwl = {}
+        for fname, label, desc, group in meta["files"]:
+            stem = Path(fname).stem
+            iwl[stem] = stem + ".html"
             src = rel_src(tid, fname, group)
-            dst = pkg / fname
             if not src.exists():
                 print("  UYARI eksik:", src)
                 continue
-            shutil.copy2(src, dst)
-        readme_html = readme(tid, meta)
-        (pkg / ("README-%s.html" % tid)).write_text(readme_html, encoding="utf-8")
+            md = src.read_text(encoding="utf-8")
+            (pkg / fname).write_text(md, encoding="utf-8")
+            if fname.endswith(".md"):
+                page = mdrender.render_page(md, package_label=tid + " · " + meta["name"], iwl=iwl)
+                (pkg / (Path(fname).stem + ".html")).write_text(page, encoding="utf-8")
+        (pkg / "index.html").write_text(readme(tid, meta), encoding="utf-8")
         shutil.make_archive(str(pkg), "zip", OUT, tid)
-        print(tid, "->", len(meta["files"]), "dosya + readme + zip")
-    # index
-    index = _index()
-    (OUT / "INDEX.html").write_text(index, encoding="utf-8")
-    print("INDEX.html yazıldı; hedef:", OUT)
-
-
-def _index():
-    cards = []
-    for tid, meta in TASKS.items():
-        cards.append('<div class="card"><div class="tag">%s</div>'
-                     '<h2>%s</h2><p>%s</p>'
-                     '<a class="open" href="%s/README-%s.html" target="_blank">AÇ ▶</a></div>'
-                     % (tid, esc(meta["name"]), esc(meta["tagline"]), tid, tid))
-    return """<!doctype html><html lang="tr"><head><meta charset="utf-8">
-<title>Remembered · İş Arşivi (Alleksenes / İ. Mert)</title>
-<style>body{margin:0;background:%(paper)s;color:%(ink)s;font-family:%(serif)s}
-header{padding:50px 64px 26px;border-bottom:1px solid %(bord)s}
-h1{font-size:40px;font-weight:500;margin:0 0 8px}
-.sub{font-family:%(mono)s;font-size:11.5px;letter-spacing:.28em;color:%(bronze)s;text-transform:uppercase}
-main{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:26px;padding:44px 64px}
-.card{border:1px solid %(bord)s;background:%(paper2)s;padding:26px 24px;display:flex;flex-direction:column;gap:12px}
-.tag{font-family:%(mono)s;font-size:11px;letter-spacing:.24em;color:%(bronze)s}
-h2{font-family:%(serif)s;font-size:24px;font-weight:500;margin:0}
-p{font-family:%(body)s;color:%(ink2)s;font-size:15px;line-height:1.5}
-.open{font-family:%(mono)s;font-size:12.5px;letter-spacing:.16em;color:%(ink)s;text-decoration:none;border-bottom:1px solid %(bronze)s;align-self:flex-start;padding-bottom:3px}
-@media(max-width:700px){main{padding:24px}header{padding:28px 24px}}</style></head>
-<body><header><div class="sub">REMEMBERED · ARŞİV · ALLEKSENES / İ. MERT</div>
-<h1>İş Arşivi</h1></header><main>""" + "".join(cards) + "</main></body></html>" % SITE
+        print(tid, "->", len(meta["files"]), "belge + index.html + zip")
+    # birleşik zip: INDEX + paketler
+    bundle = OUT / "_bundle"
+    if bundle.exists():
+        shutil.rmtree(bundle)
+    bundle.mkdir()
+    (bundle / "INDEX.html").write_text(index(), encoding="utf-8")
+    for tid in TASKS:
+        shutil.copytree(OUT / tid, bundle / tid)
+    shutil.make_archive(str(OUT / "Remembered-Arsiv"), "zip", bundle)
+    print("Remembered-Arsiv.zip yazıldı; INDEX + iki paket.")
 
 
 if __name__ == "__main__":

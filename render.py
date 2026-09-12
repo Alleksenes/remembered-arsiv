@@ -12,7 +12,9 @@ DST.mkdir(parents=True, exist_ok=True)
 EXE = os.path.expanduser(
     "~/Library/Caches/ms-playwright/chromium_headless_shell-1228/"
     "chrome-headless-shell-mac-arm64/chrome-headless-shell")
-TARGETS = ["INDEX.html", "DIL-001/README-DIL-001.html", "PR-001/README-PR-001.html"]
+TARGETS = ["INDEX.html", "DIL-001/README-DIL-001.html",
+           "DIL-001/dil-stratejisi-filolog-kalemi.html",
+           "PR-001/README-PR-001.html"]
 
 with sync_playwright() as p:
     b = p.chromium.launch(executable_path=EXE)
