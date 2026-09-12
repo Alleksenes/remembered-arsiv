@@ -193,6 +193,7 @@ def build():
     if site.exists():
         shutil.rmtree(site)
     site.mkdir(parents=True, exist_ok=True)
+    (site / ".nojekyll").write_text("", encoding="utf-8")  # Pages: Jekyll kapalı, statik servis
     for tid, meta in TASKS.items():
         pkg = site / tid
         pkg.mkdir(parents=True, exist_ok=True)
