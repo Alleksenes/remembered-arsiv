@@ -143,7 +143,7 @@ def readme(tid, meta):
             "<div class=stat><span class=k>Görünüm</span><span class=v>Koyu · editoryal</span></div>"
             "<div class=stat><span class=k>Durum</span><span class=v>Teslim edilebilir</span></div></div>"
             "<div class=cta><a class=btn href=\"%s\">Notion iş notu ↗</a>"
-            "<a class=ghost href=\"../INDEX.html\">Arşiv dizini ↗</a></div>"
+            "<a class=ghost href=\"../index.html\">Arşiv dizini ↗</a></div>"
             "<section><h2>Paket Dosyaları</h2><table>%s</table></section>"
             "<div class=callout><b>Nasıl açılır:</b> zip'i <b>çıkar</b>, bu dosyaya çift tıkla. "
             "Belge adları tıklanır ve aynı klasördeki komşu sayfalara gider; "
@@ -216,11 +216,14 @@ def build():
     if bundle.exists():
         shutil.rmtree(bundle)
     bundle.mkdir()
-    (bundle / "INDEX.html").write_text(index(), encoding="utf-8")
+    index_html = index()
+    (bundle / "INDEX.html").write_text(index_html, encoding="utf-8")
     for tid in TASKS:
         shutil.copytree(OUT / tid, bundle / tid)
     shutil.make_archive(str(OUT / "Remembered-Arsiv"), "zip", bundle)
-    print("Remembered-Arsiv.zip yazıldı; INDEX + iki paket.")
+    # Pages kökü: index.html (küçük) galeriyi verir
+    (OUT / "index.html").write_text(index_html, encoding="utf-8")
+    print("Remembered-Arsiv.zip + kök index.html yazıldı.")
 
 
 if __name__ == "__main__":
