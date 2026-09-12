@@ -189,11 +189,12 @@ def index():
 
 
 def build():
-    # paketler
+    site = OUT / "docs"
+    if site.exists():
+        shutil.rmtree(site)
+    site.mkdir(parents=True, exist_ok=True)
     for tid, meta in TASKS.items():
-        pkg = OUT / tid
-        if pkg.exists():
-            shutil.rmtree(pkg)
+        pkg = site / tid
         pkg.mkdir(parents=True, exist_ok=True)
         iwl = {}
         for fname, label, desc, group in meta["files"]:
@@ -207,23 +208,13 @@ def build():
             (pkg / fname).write_text(md, encoding="utf-8")
             if fname.endswith(".md"):
                 page = mdrender.render_page(md, package_label=tid + " · " + meta["name"], iwl=iwl)
-                (pkg / (Path(fname).stem + ".html")).write_text(page, encoding="utf-8")
+                (pkg / (stem + ".html")).write_text(page, encoding="utf-8")
         (pkg / "index.html").write_text(readme(tid, meta), encoding="utf-8")
-        shutil.make_archive(str(pkg), "zip", OUT, tid)
+        shutil.make_archive(str(OUT / tid), "zip", site, tid)
         print(tid, "->", len(meta["files"]), "belge + index.html + zip")
-    # birleşik zip: INDEX + paketler
-    bundle = OUT / "_bundle"
-    if bundle.exists():
-        shutil.rmtree(bundle)
-    bundle.mkdir()
-    index_html = index()
-    (bundle / "INDEX.html").write_text(index_html, encoding="utf-8")
-    for tid in TASKS:
-        shutil.copytree(OUT / tid, bundle / tid)
-    shutil.make_archive(str(OUT / "Remembered-Arsiv"), "zip", bundle)
-    # Pages kökü: index.html (küçük) galeriyi verir
-    (OUT / "index.html").write_text(index_html, encoding="utf-8")
-    print("Remembered-Arsiv.zip + kök index.html yazıldı.")
+    (site / "index.html").write_text(index(), encoding="utf-8")
+    shutil.make_archive(str(OUT / "Remembered-Arsiv"), "zip", site)
+    print("docs/ (Pages servisi) + Remembered-Arsiv.zip yazıldı.")
 
 
 if __name__ == "__main__":
