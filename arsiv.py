@@ -177,12 +177,32 @@ def index():
             ".open{font-family:@mono@;font-size:12.5px;letter-spacing:.16em;color:@ink@;text-decoration:none;border-bottom:1px solid @bronze@;align-self:flex-start;padding-bottom:3px}"
             ".note{padding:0 64px 60px;max-width:780px;font-family:@body@;color:@sec@;font-size:14.5px;line-height:1.6}"
             ".note b{color:@ink2@}"
-            "@media(max-width:700px){main{padding:24px}header{padding:28px 24px}.note{padding:0 24px 44px}}"
+            ".agent{margin:0 64px 28px;border:1px solid @bord@;background:@paper3@;padding:20px 24px;font-family:@body@;color:@ink2@;font-size:15.5px}"
+            ".agent .at{font-family:@mono@;font-size:11px;letter-spacing:.24em;color:@gold@;text-transform:uppercase;display:block;margin-bottom:8px}"
+            ".agent a{color:@bronze2@;text-decoration:underline}"
+            ".dl{display:flex;gap:12px;flex-wrap:wrap;padding:0 64px;margin-bottom:36px}"
+            ".dlb{font-family:@mono@;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:@paper@;background:@bronze@;padding:10px 16px;text-decoration:none}"
+            ".dlb:hover{background:@bronze2@}"
+            ".dlb.gh{background:transparent;color:@gold@;border:1px solid @bord@}"
+            ".dlb.gh:hover{border-color:@bronze2@;color:@bronze2@}"
+            "@media(max-width:700px){main{padding:24px}header{padding:28px 24px}.note{padding:0 24px 44px}.agent{margin:0 24px 20px}.dl{padding:0 24px}}"
             "</style></head><body><div class=band></div><header><div class=k>REMEMBERED · ARŞİV · ALLEKSENES / İ. MERT</div>"
-            "<h1>İş Arşivi</h1></header><main>" + cards +
-            "</main><div class=note><b>Tek tık:</b> zip'i çıkar, <b>INDEX.html</b>'e çift tıkla; kartlardan "
+            "<h1>İş Arşivi</h1></header>"
+            "<div class=agent><span class=at>AJAN / LLM ARAÇLARI İÇİN</span>"
+            "Bu arşivi bir ajan aracına (Claude Code, Codex, Copilot veya herhangi bir bağımsız LLM ajanına) "
+            "vereceksen <a href=\"AGENTS.md\" download>AGENTS.md</a>'yi de gönder: o yönerge, notları hangi "
+            "kurallarla okuyup nasıl sunacağını söyler. (İndir: <a href=\"AGENTS.md\" download>AGENTS.md</a>)</div>"
+            "<div class=dl>"
+            "<a class=\"dlb\" href=\"AGENTS.md\" download>AGENTS.md · ajan yönergesi</a>"
+            "<a class=\"dlb\" href=\"Remembered-Arsiv.zip\" download>Arşiv · tüm zip</a>"
+            "<a class=\"dlb\" href=\"DIL-001.zip\" download>DIL-001 · zip</a>"
+            "<a class=\"dlb\" href=\"PR-001.zip\" download>PR-001 · zip</a>"
+            "</div>"
+            "<main>" + cards +
+            "</main><div class=note><b>Tek tık:</b> zip'i çıkar, <b>index.html</b>'e çift tıkla; kartlardan "
             "pakete, paketten belgeye. Wikilink'ler birbirine bağlı, deprecated/dahili işlem notları pakete konmadı. "
-            "Zip içinden açılırsa bağlantılar çalışmaz; önce çıkar.</div></body></html>")
+            "Zip içinden açılırsa bağlantılar çalışmaz; önce çıkar. "
+            "<b>Ajan:</b> bir LLM aracısına verirken AGENTS.md'yi de ver (yukarıdaki kutu).</div></body></html>")
     for k, v in SITE.items():
         t = t.replace("@" + k + "@", v)
     return t
@@ -215,7 +235,12 @@ def build():
         print(tid, "->", len(meta["files"]), "belge + index.html + zip")
     (site / "index.html").write_text(index(), encoding="utf-8")
     shutil.make_archive(str(OUT / "Remembered-Arsiv"), "zip", site)
-    print("docs/ (Pages servisi) + Remembered-Arsiv.zip yazıldı.")
+    # Pages üzerinden doğrudan indirme: zip'ler + ajan yönergesi
+    for fn in ("DIL-001.zip", "PR-001.zip", "Remembered-Arsiv.zip", "AGENTS.md", "README.md"):
+        src = OUT / fn
+        if src.exists():
+            shutil.copy2(src, site / fn)
+    print("docs/ servisi + indirilebilir zip'ler + AGENTS/README eklendi.")
 
 
 if __name__ == "__main__":
