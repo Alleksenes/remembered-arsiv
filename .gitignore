@@ -1,3 +1,4 @@
+_bundle/
 shot_*.png
 __pycache__/
 .DS_Store
